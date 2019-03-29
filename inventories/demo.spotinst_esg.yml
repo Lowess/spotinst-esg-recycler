@@ -1,0 +1,11 @@
+plugin: spotinst_esg
+# aws_profile: some_profile
+
+### Spotinst settings
+# spotinst_account_id: act-123
+# spotinst_token: xxx
+
+### Inventory caching
+cache: True
+cache_plugin: jsonfile
+cache_connection: ~/.ansible
