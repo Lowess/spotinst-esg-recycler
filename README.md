@@ -14,6 +14,57 @@ The solution proposed here leverages [Ansible](https://www.ansible.com/) in orde
 
 * An [inventory plugin](https://docs.ansible.com/ansible/latest/user_guide/intro_dynamic_inventory.html)  named `spotinst_esg` that uses Spotinst API to build an inventory file made of Spotinst stateful instances (`library/inventory/spotinst_esg.py`)
 
+* Inventory output example:
+
+```bash
+# Define mandatory plugin variables through env vars
+$ export AWS_PROFILE=some_profile
+$ export SPOTINST_ACCOUNT_ID=act-123
+$ export SPOTINST_API_TOKEN=xxxxxx
+
+# Invoke plugin
+$ ansible-inventory  -i inventories/demo.spotinst_esg.yml --list
+```
+
+```json
+{
+    "_meta": {
+        "hostvars": {
+            "x.y.z.100": {},
+            "x.y.z.120": {},
+            "x.y.z.50": {},
+            ...
+        }
+    },
+    "all": {
+        "children": [
+            "sig-21230517",
+            "ungrouped",
+            "va-consul",
+            ...
+        ]
+    },
+    "sig-21230517": {
+        "hosts": [
+            "x.y.z.100",
+            "x.y.z.100",
+            "x.y.z.100"
+        ]
+    },
+    "ungrouped": {},
+    "va-consul": {
+        "hosts": [
+            "x.y.z.100",
+            "x.y.z.100",
+            "x.y.z.100"
+        ]
+    },
+    ...
+}
+```
+
+> :point_up: Please note that `hostvars` are not populated yet... Feel free to open a PR and contribute.
+
 ### :books: An example of inventory `demo.spotinst_esg.yml` using the `spotinst_esg` plugin
 
 In order to make use of the inventory you need to make sure the following required variables are set properly
