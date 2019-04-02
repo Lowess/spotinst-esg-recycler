@@ -4,6 +4,8 @@
 
 ### Ansible ###
 *.retry
+inventories/*
+!inventories/demo.spotinst_esg.yml
 
 ### Python ###
 # Byte-compiled / optimized / DLL files

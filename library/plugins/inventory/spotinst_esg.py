@@ -63,6 +63,8 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
     def __init__(self):
         super(InventoryModule, self).__init__()
 
+        self.hostvar_prefix = 'spotinst_'
+
         # credentials
         self.spotinst_api_token = None
 
@@ -220,31 +222,35 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
             :param regions: a list of regions to query
             :param account_id: a spotinst account id to retrieve ESGs from
         '''
-        inv = {}
-
+        esg_instances = {}
         try:
             # https://api.spotinst.com/spotinst-api/elastigroup/amazon-web-services/list-all-groups/
             esgs = self._request_spotinst(endpoint="aws/ec2/group?accountId={}".format(account_id))
 
             for item in esgs['response']['items']:
-                esg_instances = []
-
                 # https://api.spotinst.com/spotinst-api/elastigroup/amazon-web-services/stateful-api/list-stateful-instances
                 esg_details = self._request_spotinst(endpoint="aws/ec2/group/{}/statefulInstance?accountId={}".format(item['id'], account_id))
 
                 # Collect all instance IDs part of the ESG
                 for instance in esg_details['response']['items']:
-                    esg_instances.append(instance['instanceId'])
+                    # Add attributes to instance object
+                    instance['accountId'] = account_id
+                    instance['esg_id'] = item['id']
+                    instance['esg_name'] = item['name']
+                    # Append instance to ESG group (id and name)
+                    esg_instances.setdefault(item['id'], []).append(instance)
+                    esg_instances.setdefault(item['name'], []).append(instance)
 
-                # If stateful instances then gather ips
-                if esg_instances:
-                    # Build a filter for EC2 describe query
-                    ec2s = self._get_instances_by_region([item['region']], esg_instances)
-
+                # If stateful instances found, then gather ips
+                if item['id'] in esg_instances:
                     # Get private ips of ESG instances
-                    for ec2 in ec2s:
-                        inv.setdefault(item['id'], []).append(ec2['PrivateIpAddress'])
-                        inv.setdefault(item['name'], []).append(ec2['PrivateIpAddress'])
+                    ec2s = self._get_instances_by_region([item['region']], [i['instanceId'] for i in esg_instances[item['id']]])
+
+                    # For each instance update object to append privateIp from AWS
+                    for instance in esg_instances[item['id']]:
+                        instance.update(
+                            {'privateIp': list(filter(lambda ec2: ec2['InstanceId'] == instance['instanceId'], ec2s))[0]['PrivateIpAddress']}
+                        )
                 else:
                     # TODO Deal with non stateful instances...
                     #   aws/ec2/group/{groupid} does not contain information about instanceId
@@ -254,7 +260,7 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
         except Exception as e:
             raise AnsibleError("An error occured while parsing Spotinst response: %s" % to_native(e))
 
-        return inv
+        return esg_instances
 
     def _add_hosts(self, hosts, group):
         '''
@@ -264,15 +270,16 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
             :param hostnames: a list of hostname destination variables in order of preference
         '''
         for host in hosts:
-            self.inventory.add_host(host, group=group)
-            # for hostvar, hostval in host.items():
-            #     display.debug("{} {}".format(hostval))
-            #     self.inventory.set_variable(hostname, hostvar, hostval)
+            self.inventory.add_host(host['privateIp'], group=group)
+            for hostvar, hostval in host.items():
+                self.inventory.set_variable(host['privateIp'],
+                                            "{}{}".format(self.hostvar_prefix, hostvar),
+                                            hostval)
 
     def _populate(self, groups):
-        for group in groups:
+        for group, hosts in groups.items():
             self.inventory.add_group(group)
-            self._add_hosts(hosts=groups[group], group=group)
+            self._add_hosts(hosts=hosts, group=group)
             self.inventory.add_child('all', group)
 
     def parse(self, inventory, loader, path, cache=False):
