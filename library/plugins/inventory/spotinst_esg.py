@@ -219,8 +219,10 @@ class InventoryModule(BaseInventoryPlugin, Constructable, Cacheable):
 
     def _query(self, account_id):
         '''
-            :param regions: a list of regions to query
-            :param account_id: a spotinst account id to retrieve ESGs from
+            Generate a map of ESGs -> Instances. The Instance object comes from Spotinst API and is then
+            enriched with AWS EC2 privateIp data.
+
+            :param account_id: A spotinst account ID to retrieve ESGs from
         '''
         esg_instances = {}
         try:
