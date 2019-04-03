@@ -33,36 +33,36 @@ description:
     - This module is able to recycle a stateful instance from an Elastigroup.
 options:
     api_token:
-      required: true
-      description:
-        - (String) Spotinst API token
+        required: true
+        description:
+            - (String) Spotinst API token
 
     account_id:
-      required: true
-      description:
-        - (String) Spotinst account id with format act-xxx. (Example act-12345)
+        required: true
+        description:
+            - (String) Spotinst account id with format act-xxx. (Example act-12345)
 
     esg_id:
-      required: true
-      description:
-        - (String) Id of the Elastigroup to operate on with format sig-xxx. (Example: sig-227a0005)
+        required: true
+        description:
+            - (String) Id of the Elastigroup to operate on with format sig-xxx. (Example sig-227a0005)
 
     stateful_instance_id:
-      required: true
-      description:
-        - (String) Stateful instance ID with format ssi-xxx. (Example: ssi-227a0005)
+        required: true
+        description:
+            - (String) Stateful instance ID with format ssi-xxx. (Example ssi-227a0005)
 
     state:
-      required: false
-      choices: [ recyled ]
-      description:
-        - C(recyled) to recycle a stateful Elastigroup.
+        required: false
+        choices: [ recyled ]
+        description:
+            - C(recyled) to recycle a stateful Elastigroup.
 
     wait_timeout:
-      required: false
-      default: 300
-      description:
-        - (Integer) Number of seconds to wait for the operation to complete
+        required: false
+        default: 500
+        description:
+            - (Integer) Number of seconds to wait for the operation to complete
 '''
 
 EXAMPLES = '''

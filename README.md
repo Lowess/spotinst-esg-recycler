@@ -96,9 +96,9 @@ $ ansible-inventory  -i inventories/demo.spotinst_esg.yml --list
 }
 ```
 
-> :point_up: Please note that `hostvars` are not populated yet... Feel free to open a PR and contribute.
+> :point_up: Please note that `hostvars` are prefixed with `spotinst_`.
 
-### :books: An example of inventory `demo.spotinst_esg.yml` using the `spotinst_esg` plugin
+#### :books: An example of inventory `demo.spotinst_esg.yml` using the `spotinst_esg` plugin
 
 In order to make use of the inventory you need to make sure the following required variables are set properly
 
@@ -119,6 +119,147 @@ cache_connection: ~/.ansible
 
 > :point_up: Inventory caching is also supported please see [enabling fact cache plugins](https://docs.ansible.com/ansible/latest/plugins/cache.html#enabling-fact-cache-plugins)
 
-### :gear: Ansible role and playbook to perform a rolling recycle on a Spotinst ESG
+### :gear: `spotinst_aws_stateful` custom module
 
-TODO
+> :point_up: Please not that right now the module only supports `recycling` stateful elastigroups but the gap to implement other stateful operations such as `deallocate`, `pause` and `resume` should be fairly straight forward. PR welcome :blush:
+
+---
+
+#### spotinst_aws_stateful
+
+Manage Stateful Spotinst Elastigroups.
+
+  * Synopsis
+  * Options
+  * Examples
+
+##### Synopsis
+ A module to manage Stateful Spotinst Elastigroups using Spotinst API.
+ This module is able to recycle a stateful instance from an Elastigroup.
+
+##### Options
+
+| Parameter            | Required | Default | Choices                     | Comments                                                                                 |
+|:---------------------|:--------:|:--------|:----------------------------|:-----------------------------------------------------------------------------------------|
+| account_id           |   yes    |         |                             | (String) Spotinst account id with format act-xxx. (Example act-12345)                    |
+| stateful_instance_id |   yes    |         |                             | (String) Stateful instance ID with format ssi-xxx. (Example ssi-227a0005)                |
+| state                |    no    |         | <ul> <li>recyled</li> </ul> | C(recyled) to recycle a stateful Elastigroup.                                            |
+| esg_id               |   yes    |         |                             | (String) Id of the Elastigroup to operate on with format sig-xxx. (Example sig-227a0005) |
+| api_token            |   yes    |         |                             | (String) Spotinst API token                                                              |
+| wait_timeout         |    no    | 500     |                             | (Integer) Number of seconds to wait for the operation to complete                        |
+
+
+##### Examples
+
+```
+# Example for recycling a stateful ESG where `spotinst_esg.yml` dynamic inventory is used
+
+- name: Recycle Stateful instance
+  spotinst_aws_stateful:
+    state: recycled
+    esg: "{{ hostvars[inventory_hostname].spotinst_esg_id }}"
+    account_id: "{{ hostvars[inventory_hostname].spotinst_accountId }}"
+    api_token: "{{ lookup('env', 'SPOTINST_API_TOKEN' )}}"
+    stateful_instance_id: "{{ hostvars[inventory_hostname].spotinst_id }}"
+  delegate_to: localhost
+  register: __testout
+
+```
+
+---
+
+### :gear: `recycle-esg.yml` playbook to perform a rolling recycle on a Spotinst ESG
+
+#### :books: Playbook example:
+
+```yaml
+- name: Recycle Kafka ESG
+  hosts: <esg-name>
+  gather_facts: false
+  serial: 1
+
+  vars:
+    recycle_check_port: 9092
+
+  tasks:
+    - name: Recycle stateful instance and wait for it
+      block:
+
+        - name: Recycle stateful instance
+          spotinst_aws_stateful:
+            state: recycled
+            esg_id: "{{ hostvars[inventory_hostname].spotinst_esg_id }}"
+            account_id: "{{ hostvars[inventory_hostname].spotinst_accountId }}"
+            api_token: "{{ lookup('env', 'SPOTINST_API_TOKEN' )}}"
+            stateful_instance_id: "{{ hostvars[inventory_hostname].spotinst_id }}"
+          register: __spotinst_recycled_instance
+
+        - name: Dump recycled output
+          debug:
+            msg: "{{ __spotinst_recycled_instance }}"
+            verbosity: 2
+
+        - name: Wait for port to be up
+          wait_for:
+            state: present
+            host: "{{ __spotinst_recycled_instance.stateful.privateIp }}"
+            port: "{{ recycle_check_port }}"
+
+      delegate_to: localhost
+
+```
+
+#### :metal: Playbook execution and output:
+
+```sh
+# Required exports
+$ export AWS_PROFILE=some_profile
+$ export SPOTINST_API_TOKEN=xxxxxx
+
+# Make use of the custom inventory spotinst_esg.yml
+$ ansible-playbook -i inventories/demo.spotinst_esg.yml recycle-esg.yml
+
+PLAY [Recycle Kafka ESG] *************************************************************************************************************
+
+TASK [Recycle stateful instance] *****************************************************************************************************
+changed: [10.201.0.x -> localhost]
+
+TASK [Dump recycled output] **********************************************************************************************************
+skipping: [10.201.0.x]
+
+TASK [Wait for port to be up] ********************************************************************************************************
+ok: [10.201.0.x -> localhost]
+
+PLAY [Recycle Kafka ESG] *************************************************************************************************************
+
+TASK [Recycle stateful instance] *****************************************************************************************************
+changed: [10.201.0.y -> localhost]
+
+TASK [Dump recycled output] **********************************************************************************************************
+skipping: [10.201.0.y]
+
+TASK [Wait for port to be up] ********************************************************************************************************
+ok: [10.201.0.y -> localhost]
+
+PLAY [Recycle Kafka ESG] *************************************************************************************************************
+
+TASK [Recycle stateful instance] *****************************************************************************************************
+changed: [10.201.0.z -> localhost]
+
+TASK [Dump recycled output] **********************************************************************************************************
+skipping: [10.201.0.z]
+
+TASK [Wait for port to be up] ********************************************************************************************************
+ok: [10.201.0.z -> localhost]
+
+PLAY RECAP ************************************************************************************************************************************************************
+10.201.0.x               : ok=3    changed=1    unreachable=0    failed=0
+10.201.0.y               : ok=3    changed=1    unreachable=0    failed=0
+10.201.0.z               : ok=3    changed=1    unreachable=0    failed=0
+
+Playbook run took 0 days, 0 hours, 17 minutes, 34 seconds
+```
+
+---
+
+Made with :heart: by Florian Dambrine @GumGum

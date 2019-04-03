@@ -22,11 +22,12 @@
         - name: Dump recycled output
           debug:
             msg: "{{ __spotinst_recycled_instance }}"
+            verbosity: 2
 
         - name: Wait for port to be up
           wait_for:
             state: present
             host: "{{ __spotinst_recycled_instance.stateful.privateIp }}"
-            port: 9092
+            port: "{{ recycle_check_port }}"
 
       delegate_to: localhost
