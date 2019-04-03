@@ -30,21 +30,54 @@ $ ansible-inventory  -i inventories/demo.spotinst_esg.yml --list
 {
     "_meta": {
         "hostvars": {
-            "x.y.z.100": {},
-            "x.y.z.120": {},
-            "x.y.z.50": {},
+            "x.y.z.100": {
+                "spotinst_accountId": "act-1234",
+                "spotinst_createdAt": "2019-02-04T10:10:31.000Z",
+                "spotinst_devices": [
+                    {
+                        "deviceName": "/dev/xvdx",
+                        "volumeId": "vol-1234"
+                    },
+                    {
+                        "deviceName": "/dev/xvdz",
+                        "volumeId": "vol-2345"
+                    },
+                    {
+                        "deviceName": "/dev/xvdy",
+                        "volumeId": "vol-3456"
+                    },
+                    {
+                        "deviceName": "/dev/xvdw",
+                        "volumeId": "vol-4567"
+                    }
+                ],
+                "spotinst_esg_id": "sig-1234",
+                "spotinst_esg_name": "spotinst-elastigroup-demo",
+                "spotinst_id": "ssi-1234",
+                "spotinst_instanceId": "i-1234",
+                "spotinst_launchedAt": "2019-04-03T08:36:44.000Z",
+                "spotinst_privateIp": "10.201.0.107",
+                "spotinst_state": "ACTIVE"
+            },
+            },
+            "x.y.z.120": {
+                ...
+            },
+            "x.y.z.50": {
+                ...
+            },
             ...
         }
     },
     "all": {
         "children": [
-            "sig-21230517",
+            "sig-1234",
             "ungrouped",
-            "va-consul",
+            "spotinst-elastigroup-demo",
             ...
         ]
     },
-    "sig-21230517": {
+    "sig-1234": {
         "hosts": [
             "x.y.z.100",
             "x.y.z.100",
@@ -52,7 +85,7 @@ $ ansible-inventory  -i inventories/demo.spotinst_esg.yml --list
         ]
     },
     "ungrouped": {},
-    "va-consul": {
+    "spotinst-elastigroup-demo": {
         "hosts": [
             "x.y.z.100",
             "x.y.z.100",
