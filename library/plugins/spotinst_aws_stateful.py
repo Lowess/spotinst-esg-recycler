@@ -60,9 +60,9 @@ options:
 
     wait_timeout:
         required: false
-        default: 500
+        default: 600
         description:
-            - (Integer) Number of seconds to wait for the operation to complete
+            - (Integer) Number of seconds to wait for the operation to complete, default is 10min
 '''
 
 EXAMPLES = '''
@@ -148,7 +148,7 @@ def _call_spotinst_api(module, endpoint, method='GET'):
         _return_result(module=module, changed=False, failed=True, message=str(e))
 
 
-def _wait_for_stateful_instance(module, pending_state, final_state='ACTIVE', wait_timeout=300):
+def _wait_for_stateful_instance(module, wait_timeout, pending_state, final_state='ACTIVE'):
     """TODO."""
     ssi = module.params.get('stateful_instance_id')
     endpoint = "aws/ec2/group/{}/statefulInstance?accountId={}".format(module.params.get('esg_id'),
@@ -212,10 +212,10 @@ def recycle_elastigroup(module):
                                                                                   module.params.get('account_id'))
 
     # Safety check as Stateful operations can only be performed when instance is in ACTIVE state
-    _wait_for_stateful_instance(module, pending_state='ACTIVE', wait_timeout=wait_timeout)
+    _wait_for_stateful_instance(module, wait_timeout=wait_timeout, pending_state='ACTIVE')
 
     _call_spotinst_api(module, endpoint=endpoint, method='PUT')
-    recycled_instance = _wait_for_stateful_instance(module, pending_state='RECYCLING', wait_timeout=wait_timeout)
+    recycled_instance = _wait_for_stateful_instance(module, wait_timeout=wait_timeout, pending_state='RECYCLING')
 
     # If a Stateful instance does no have privateIp persistance gather new privateIp
     if 'privateIp' not in recycled_instance:
@@ -245,7 +245,7 @@ def main():
         esg_id=dict(required=True, type='str'),
         stateful_instance_id=dict(required=True, type='str'),
         state=dict(required=False, choices=['recycled'], default='recycled'),
-        wait_timeout=dict(required=False, default=500)
+        wait_timeout=dict(required=False, default=600)
     )),
 
     module = AnsibleModule(

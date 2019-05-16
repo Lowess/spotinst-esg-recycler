@@ -1,0 +1,53 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: false
+  tasks:
+    - name: Find gzipped Apt indexes
+      find:
+        paths: /var/lib/apt/lists
+        patterns: '*lz4'
+      register: __gzipped_apt_indexes
+
+    - name: Cleanup gzipped Apt indexes
+      file:
+        state: absent
+        path: "{{ item.path }}"
+      with_items: "{{ __gzipped_apt_indexes.files }}"
+
+    - name: Disable Apt GzipIndexes (Debian Bug report logs - 617856)
+      replace:
+        dest: /etc/apt/apt.conf.d/docker-gzip-indexes
+        regexp: 'Acquire::GzipIndexes "true"'
+        replace: 'Acquire::GzipIndexes "false"'
+
+    - name: Install iproute (Allow Ansible Network facts to be populated)
+      apt:
+        state: present
+        name: iproute
+        update_cache: true
+  tags: always
+
+- name: Mock systemd cloud units
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Mock Systemd cloud-final.service
+      copy:
+        dest: /etc/systemd/system/cloud-final.service
+        content: |
+          [Unit]
+          Description=Mockup cloud user/final scripts
+
+          [Service]
+          Type=oneshot
+          ExecStart=/bin/true
+          RemainAfterExit=yes
+          TimeoutSec=0
+          KillMode=process
+          TasksMax=infinity
+
+          # Output needs to appear in instance console output
+          StandardOutput=journal+console
+      when:
+        - ansible_service_mgr == 'systemd'

@@ -1,0 +1,10 @@
+rulesdir:
+  # Location on drone-molecule docker-container
+  - /opt/gumgum-lint-rules/rules
+  # Location on developer's laptop
+  - ~/Workspace/opt/gumgum-lint-rules/rules
+
+use_default_rules: true
+
+exclude_paths:
+  - molecule/default/

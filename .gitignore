@@ -6,6 +6,8 @@
 *.retry
 inventories/*
 !inventories/demo.spotinst_esg.yml
+recycle-*
+!recycle-esg.yml
 
 ### Python ###
 # Byte-compiled / optimized / DLL files

@@ -1,0 +1,16 @@
+---
+exclude: 'vault.yml'
+
+repos:
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.11.1
+    hooks:
+      - id: yamllint
+        files: \.(yaml|yml)$
+
+  - repo: https://github.com/willthames/ansible-lint.git
+    rev: v3.4.21
+    hooks:
+      - id: ansible-lint
+        files: \.(yaml|yml)$
+        exclude: molecule/

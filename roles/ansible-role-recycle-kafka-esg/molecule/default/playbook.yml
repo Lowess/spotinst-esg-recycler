@@ -1,0 +1,7 @@
+---
+- name: Converge
+  hosts: all
+  environment: "{{ proxy_env }}"
+  roles:
+    - role: ansible-role-recycle-kafka-esg
+      tags: recycle-kafka-esg

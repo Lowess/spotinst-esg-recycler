@@ -1,33 +1,7 @@
 - name: Recycle Kafka ESG
-  hosts: va-prism-kafka--stage
+  hosts: va-prism-kafka--prod
   gather_facts: false
   serial: 1
 
-  vars:
-    recycle_check_port: 9092
-
-  tasks:
-    - name: Recycle stateful instance and wait for it
-      block:
-
-        - name: Recycle stateful instance
-          spotinst_aws_stateful:
-            state: recycled
-            esg_id: "{{ hostvars[inventory_hostname].spotinst_esg_id }}"
-            account_id: "{{ hostvars[inventory_hostname].spotinst_accountId }}"
-            api_token: "{{ lookup('env', 'SPOTINST_API_TOKEN' )}}"
-            stateful_instance_id: "{{ hostvars[inventory_hostname].spotinst_id }}"
-          register: __spotinst_recycled_instance
-
-        - name: Dump recycled output
-          debug:
-            msg: "{{ __spotinst_recycled_instance }}"
-            verbosity: 2
-
-        - name: Wait for port to be up
-          wait_for:
-            state: present
-            host: "{{ __spotinst_recycled_instance.stateful.privateIp }}"
-            port: "{{ recycle_check_port }}"
-
-      delegate_to: localhost
+  roles:
+    - ansible-role-recycle-kafka-esg

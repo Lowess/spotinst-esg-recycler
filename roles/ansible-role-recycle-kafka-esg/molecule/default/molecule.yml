@@ -1,0 +1,74 @@
+---
+
+dependency:
+  name: galaxy
+  options:
+    role-file: ${PWD}/molecule/resources/requirements-${CI:-local}.yml
+
+driver:
+  name: docker
+
+lint:
+  name: yamllint
+
+platforms:
+  - name: ubuntu_trusty${CI_UUID}
+    image: ubuntu:trusty
+    command: /sbin/init
+    capabilities:
+      - SYS_ADMIN
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+
+  # Please read https://hub.docker.com/r/solita/ubuntu-systemd/
+  # In order to have systemd playing well on docker some extra parameters are needed
+  - name: ubuntu_xenial${CI_UUID}
+    image: solita/ubuntu-systemd:xenial
+    command: /sbin/init
+    capabilities:
+      - SYS_ADMIN
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+    tmpfs:
+      - /run
+      - /run/lock
+    security_opts:
+      - label=disable
+      - label:seccomp:unconfined
+
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_LIBRARY: /etc/ansible/library
+  config_options:
+    defaults:
+      callback_whitelist: timer
+      strategy: ${ANSIBLE_STRATEGY:-linear}
+      strategy_plugins: /opt/mitogen/ansible_mitogen/plugins/strategy
+      vault_password_file: ${PWD}/molecule/resources/.vault
+  inventory:
+    links:
+      group_vars: ../inventory/group_vars/
+  lint:
+    name: ansible-lint
+    enabled: true
+    options:
+      force-color: true
+
+scenario:
+  name: default
+  converge_sequence:
+    - dependency
+    - create
+    - prepare
+    - converge
+    - idempotence
+
+verifier:
+  name: testinfra
+  env:
+    ANSIBLE_STRATEGY: linear
+  options:
+    color: 'yes'
+  lint:
+    name: flake8

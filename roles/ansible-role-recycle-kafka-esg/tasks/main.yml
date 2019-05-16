@@ -1,0 +1,60 @@
+---
+# tasks file for ansible-role-recycle-kafka-esg
+
+- name: Recycle stateful instance and wait for it
+  block:
+    - name: Show recycling instance
+      debug:
+        msg: "Recycling {{ hostvars[inventory_hostname].spotinst_id }} from ESG {{ hostvars[inventory_hostname].spotinst_esg_id }}..."
+
+    - name: Recycle stateful instance
+      spotinst_aws_stateful:
+        state: recycled
+        esg_id: "{{ hostvars[inventory_hostname].spotinst_esg_id }}"
+        account_id: "{{ hostvars[inventory_hostname].spotinst_accountId }}"
+        api_token: "{{ lookup('env', 'SPOTINST_API_TOKEN' )}}"
+        stateful_instance_id: "{{ hostvars[inventory_hostname].spotinst_id }}"
+      register: __spotinst_recycled_instance
+
+    - name: Dump recycled output
+      debug:
+        msg: "{{ __spotinst_recycled_instance }}"
+        verbosity: 2
+
+    - name: Show recycled node Private Ip
+      debug:
+        msg: "Instance {{ hostvars[inventory_hostname].spotinst_id }} new Private IP: {{ __spotinst_recycled_instance.stateful.privateIp }}"
+
+    - name: Wait for ports to be up
+      wait_for:
+        state: present
+        host: "{{ __spotinst_recycled_instance.stateful.privateIp }}"
+        port: "{{ item }}"
+        timeout: 300
+      with_items:
+        - 22
+        - "{{ recycle_check_ports }}"
+        - "{{ recycle_sanity_check.port }}"
+
+    ################################################################################################################
+    ### Sanity check before moving on to the next node...
+    ################################################################################################################
+
+    - name: Run Kafka sanity check
+      block:
+        - name: Check Jolokia JMX metrics
+          uri:
+            url: "http://{{ __spotinst_recycled_instance.stateful.privateIp }}:{{ recycle_sanity_check.port }}/jolokia/read/{{ recycle_sanity_check.endpoint }}"
+            return_content: true
+          register: __recycle_sanity_check
+          until: __recycle_sanity_check.json['value']['Value'] == recycle_sanity_check.expect
+          delay: 10
+          retries: 30
+
+        - name: Show Jolokia JMX metrics
+          debug:
+            msg: "{{ __recycle_sanity_check.json }}"
+            verbosity: 2
+      when: recycle_sanity_check
+
+  delegate_to: localhost

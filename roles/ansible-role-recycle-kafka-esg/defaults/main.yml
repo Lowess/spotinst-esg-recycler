@@ -1,0 +1,11 @@
+---
+# defaults file for ansible-role-recycle-kafka-esg
+
+recycle_check_ports:
+  - 9092
+
+recycle_sanity_check:
+  type: jolokia
+  port: 8778
+  endpoint: kafka.server:type=ReplicaManager,name=UnderReplicatedPartitions
+  expect: 0
